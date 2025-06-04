@@ -1,7 +1,7 @@
 const express = require('express')
 const cors = require('cors')
 require('dotenv').config()
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 const port = process.env.PORT || 5000;
 
@@ -36,12 +36,12 @@ async function run() {
         })
         app.get('/cart', async (req, res) => {
             const email = req.query.email;
-            const query = { email: email };
-            const result = await cartCollection.find(query).toArray(); 
-            res.send(result);
-        });
+            const query = { email: email }
+            const result = await cartCollection.find(query).toArray()
+            res.send(result)
+        })
 
-
+        // get data form cart collection from the database
         app.get('/cart', async (req, res) => {
             const query = req.body;
             const result = await cartCollection.find(query).toArray()
@@ -51,6 +51,35 @@ async function run() {
         app.post('/lichees', async (req, res) => {
             const query = req.body;
             const result = await cartCollection.insertOne(query)
+            res.send(result)
+        })
+        app.patch('/user/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const updateDoc = {
+                $set: {
+                    role: "admin",
+                }
+            }
+            const result = await userCollection.updateOne(query, updateDoc);
+            res.send(result)
+
+        })
+        app.get('/user/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await userCollection.findOne(query)
+            res.send(result)
+        })
+        app.get('/user', async (req, res) => {
+            const user = req.body;
+            const result = await userCollection.find(user).toArray()
+            res.send(result)
+
+        })
+        app.post('/user', async (req, res) => {
+            const user = req.body;
+            const result = await userCollection.insertOne(user);
             res.send(result)
         })
 
