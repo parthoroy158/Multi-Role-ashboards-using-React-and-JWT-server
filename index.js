@@ -37,8 +37,19 @@ async function run() {
         })
 
         const verifyToken = (req, res, next) => {
-            console.log('This is the token:', req.headers)
-            next()
+            console.log('This is the token:', req.headers.authorization)
+            if (!req.headers.authorization) {
+                return res.status(401).send({ message: 'unauthorized access' });
+            }
+            const token = req.headers.authorization.split(' ')[1]
+            console.log("After split:", token)
+            jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
+                if (err) {
+                    return res.send({ message: 'Fuck Of' })
+                }
+                req.decoded = decoded;
+                next()
+            })
         }
 
         app.get('/lichees', async (req, res) => {
@@ -67,7 +78,7 @@ async function run() {
         })
 
 
-        app.get('/user/admin/:email', async (req, res) => {
+        app.get('/user/admin/:email',verifyToken, async (req, res) => {
             const email = req.params.email;
             const query = { email: email }
             const user = await userCollection.findOne(query)
@@ -97,7 +108,7 @@ async function run() {
             res.send(result)
         })
 
-        app.get('/user', async (req, res) => {
+        app.get('/user', verifyToken, async (req, res) => {
             const user = req.body;
             const result = await userCollection.find(user).toArray()
             res.send(result)
