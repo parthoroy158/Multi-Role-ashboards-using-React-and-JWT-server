@@ -1,6 +1,7 @@
 const express = require('express')
 const cors = require('cors')
 require('dotenv').config()
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 const port = process.env.PORT || 5000;
@@ -29,6 +30,17 @@ async function run() {
         const cartCollection = client.db("lichee_sell").collection("cart_collection");
         const userCollection = client.db("lichee_sell").collection("user_collection");
 
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN, { expiresIn: '1h' })
+            res.send({ token })
+        })
+
+        const verifyToken = (req, res, next) => {
+            console.log('This is the token:', req.headers)
+            next()
+        }
+
         app.get('/lichees', async (req, res) => {
             const query = req.body;
             const result = await licheeCollection.find(query).toArray()
@@ -53,24 +65,38 @@ async function run() {
             const result = await cartCollection.insertOne(query)
             res.send(result)
         })
+
+
+        app.get('/user/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email }
+            const user = await userCollection.findOne(query)
+            let admin = false;
+            if (user) {
+                admin = user?.role === "admin"
+            }
+            res.send({ admin })
+        })
+
         app.patch('/user/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const updateDoc = {
                 $set: {
-                    role: "admin",
+                    role: "admin"
                 }
             }
-            const result = await userCollection.updateOne(query, updateDoc);
+            const result = await userCollection.updateOne(query, updateDoc)
             res.send(result)
-
         })
+
         app.get('/user/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const result = await userCollection.findOne(query)
             res.send(result)
         })
+
         app.get('/user', async (req, res) => {
             const user = req.body;
             const result = await userCollection.find(user).toArray()
@@ -79,6 +105,11 @@ async function run() {
         })
         app.post('/user', async (req, res) => {
             const user = req.body;
+            const query = { email: user.email }
+            const existingUser = await userCollection.findOne(query)
+            if (existingUser) {
+                return res.send({ message: 'user already exists' })
+            }
             const result = await userCollection.insertOne(user);
             res.send(result)
         })
